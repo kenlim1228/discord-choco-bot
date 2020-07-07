@@ -225,11 +225,11 @@ const sendDiscordNotification = (cloudantDoc, twitchLiveStreamInfo) => {
         if (cloudantDoc['twitch_user']) {
             embed.setAuthor(
                 cloudantDoc['twitch_user']['display_name'],
-                cloudantDoc['twitch_user']['profile_image_url'],
+                cloudantDoc['twitch_user']['profile_image_url'] + '?ts=' + moment().valueOf(),
                 'https://twitch.tv/' + cloudantDoc['twitch_user']['login']
             );
             embed.setURL('https://twitch.tv/' + cloudantDoc['twitch_user']['login']);
-            embed.setThumbnail(cloudantDoc['twitch_user']['profile_image_url']);
+            embed.setThumbnail(cloudantDoc['twitch_user']['profile_image_url'] + '?ts=' + moment().valueOf());
             if (cloudantDoc['twitch_user']['description']) {
                 embed.setDescription(cloudantDoc['twitch_user']['description']);
             }
@@ -237,7 +237,7 @@ const sendDiscordNotification = (cloudantDoc, twitchLiveStreamInfo) => {
         embed.setTitle(twitchLiveStreamInfo['title']);
         let thumbnailUrl = twitchLiveStreamInfo['thumbnail_url'].replace(/{width}/g, '1920');
         thumbnailUrl = thumbnailUrl.replace(/{height}/g, '1080');
-        embed.setImage(thumbnailUrl);
+        embed.setImage(thumbnailUrl + '?ts=' + moment().valueOf());
         if (twitchLiveStreamInfo['twitch_game']) {
             embed.addField('Game', twitchLiveStreamInfo['twitch_game']['name'], true);
         }
