@@ -1,24 +1,26 @@
 {
-  "name": "discord-choco-bot",
-  "version": "1.0.0",
-  "description": "Discord Bot for Twitch Go-Live Notifications",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "discord",
-    "twitch",
-    "notification",
-    "live"
-  ],
-  "author": "Ken Lim",
-  "license": "ISC",
-  "dependencies": {
-    "@cloudant/cloudant": "^4.2.4",
-    "axios": "^0.19.2",
-    "discord.js": "^12.2.0",
-    "dotenv": "^8.2.0",
-    "moment": "^2.27.0"
-  }
+    "name": "discord-choco-bot",
+    "version": "1.0.0",
+    "description": "Discord Bot for Twitch Go-Live Notifications",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "discord",
+        "twitch",
+        "notification",
+        "live"
+    ],
+    "author": "Ken Lim",
+    "license": "ISC",
+    "dependencies": {
+        "@cloudant/cloudant": "^4.2.4",
+        "axios": "^0.19.2",
+        "discord.js": "^12.2.0",
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "moment": "^2.27.0"
+    }
 }

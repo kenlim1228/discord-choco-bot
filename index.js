@@ -1,5 +1,6 @@
 const axios = require('axios');
 const moment = require('moment');
+const express = require('express');
 const Discord = require('discord.js');
 const Cloudant = require('@cloudant/cloudant');
 require('dotenv').config();
@@ -259,3 +260,9 @@ discordClient.on('ready', () => {
 });
 
 discordClient.login(process.env.DISCORD_TOKEN);
+
+const app = express();
+app.get('/_ah/warmup', (req, res) => {
+    res.sendStatus(200);
+});
+app.listen(8080);
