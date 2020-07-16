@@ -124,7 +124,11 @@ const checkTwitchUserIsStreaming = async (cloudantDoc) => {
         } else {
             console.log('checkTwitchUserIsStreaming', 'User not streaming');
             if (cloudantDoc['discord_notification_message_id']) {
-                checkDiscordMessage(cloudantDoc['discord_channel_id'], cloudantDoc['discord_notification_message_id']);
+                const discordMessage = await editDiscordNotification(cloudantDoc);
+                console.log('checkTwitchUserIsStreaming', 'Edited notification with VOD link');
+                cloudantDoc['discord_notification_message_id'] = '';
+                cloudantDoc['discord_notification_started_at'] = '';
+                cloudantDoc['twitch_stream_vod'] = null;
             }
         }
     } else {
@@ -228,16 +232,16 @@ const fetchTwitchVideoInfo = async (twitchUserId, liveStreamTitle) => {
 };
 
 const verifyOrRefreshTwitchToken = async () => {
-    let twitchChannelInfo = null;
+    let tokenIsValid = false;
     try {
-        const response = await axios.get('https://api.twitch.tv/helix/channels?broadcaster_id=48212629', {
+        const response = await axios.get('https://id.twitch.tv/oauth2/validate', {
             headers: {
                 'Client-ID': process.env.TWITCH_CLIENTID,
                 Authorization: 'Bearer ' + process.env.TWITCH_TOKEN
             }
         });
-        if (response.data && response.data.data && response.data.data[0]) {
-            twitchChannelInfo = response.data.data[0];
+        if (response.data) {
+            tokenIsValid = true;
         }
         console.log('verifyOrRefreshTwitchToken', 'Token still valid');
     } catch (err) {
@@ -253,10 +257,11 @@ const verifyOrRefreshTwitchToken = async () => {
             if (response.data && response.data.access_token) {
                 console.log('verifyOrRefreshTwitchToken', 'Got new token');
                 process.env.TWITCH_TOKEN = response.data.access_token;
+                tokenIsValid = true;
             }
         }
     }
-    return twitchChannelInfo;
+    return tokenIsValid;
 };
 
 const sendDiscordNotification = async (cloudantDoc, twitchLiveStreamInfo) => {
@@ -283,10 +288,10 @@ const sendDiscordNotification = async (cloudantDoc, twitchLiveStreamInfo) => {
     if (twitchLiveStreamInfo['twitch_game']) {
         embed.addField('Game', twitchLiveStreamInfo['twitch_game']['name'], true);
     }
-    embed.addField('Viewers', twitchLiveStreamInfo['viewer_count'], true);
+    //embed.addField('Viewers', twitchLiveStreamInfo['viewer_count'], true);
     embed.setFooter('Started streaming');
     embed.setTimestamp(twitchLiveStreamInfo['started_at']);
-    let customMessage = 'Hey @everyone! Come watch this awesome streamer!';
+    let customMessage = 'Hey everyone! Come watch this awesome streamer!';
     if (cloudantDoc['discord_custom_message']) {
         customMessage = cloudantDoc['discord_custom_message'];
     }
@@ -294,10 +299,36 @@ const sendDiscordNotification = async (cloudantDoc, twitchLiveStreamInfo) => {
     return discordMessage;
 };
 
-const checkDiscordMessage = async (discordChannelId, discordMessageId) => {
-    const channel = await discordClient.channels.fetch(discordChannelId);
-    const message = await channel.messages.fetch(discordMessageId);
-    console.log('Got message', message.content, message.embed);
+const editDiscordNotification = async (cloudantDoc) => {
+    const channel = await discordClient.channels.fetch(cloudantDoc['discord_channel_id']);
+    const message = await channel.messages.fetch(cloudantDoc['discord_notification_message_id']);
+    const embed = new Discord.MessageEmbed({
+        type: 'rich'
+    });
+    if (cloudantDoc['twitch_user']) {
+        embed.setAuthor(
+            cloudantDoc['twitch_user']['display_name'],
+            cloudantDoc['twitch_user']['profile_image_url'] + '?ts=' + moment().valueOf(),
+            'https://twitch.tv/' + cloudantDoc['twitch_user']['login']
+        );
+        embed.setURL('https://twitch.tv/' + cloudantDoc['twitch_user']['login']);
+        embed.setThumbnail(cloudantDoc['twitch_user']['profile_image_url'] + '?ts=' + moment().valueOf());
+        if (cloudantDoc['twitch_user']['description']) {
+            embed.setDescription(cloudantDoc['twitch_user']['description']);
+        }
+        if (cloudantDoc['twitch_user']['offline_image_url']) {
+            embed.setImage(cloudantDoc['twitch_user']['offline_image_url'] + '?ts=' + moment().valueOf());
+        }
+    }
+    if (cloudantDoc['twitch_stream_vod']) {
+        embed.setTitle(cloudantDoc['twitch_stream_vod']['title']);
+        embed.addField('VOD', '[Link](' + cloudantDoc['twitch_stream_vod']['url'] + ')');
+    }
+    embed.setFooter('Last online');
+    embed.setTimestamp(moment());
+    let customMessage = cloudantDoc['twitch_user']['display_name'] + ' is not online anymore. Check out the VOD!';
+    const discordMessage = await message.edit(customMessage, embed);
+    return discordMessage;
 };
 
 discordClient.on('ready', () => {
