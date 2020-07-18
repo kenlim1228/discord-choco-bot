@@ -119,6 +119,21 @@ const checkTwitchUserIsStreaming = async (cloudantDoc) => {
                 cloudantDoc['twitch_stream_vod'] = twitchVideoInfo;
             } else {
                 console.log('checkTwitchUserIsStreaming', 'Notification for live stream already sent');
+                let hasStreamVod = false;
+                if (cloudantDoc['twitch_stream_vod']) {
+                    if (cloudantDoc['twitch_stream_vod']['title'] === twitchLiveStreamInfo['title']) {
+                        console.log('checkTwitchUserIsStreaming', 'Already got stream VOD');
+                        hasStreamVod = true;
+                    }
+                }
+                if (!hasStreamVod) {
+                    console.log('checkTwitchUserIsStreaming', 'No stream VOD, try to get VOD');
+                    const twitchVideoInfo = await fetchTwitchVideoInfo(
+                        cloudantDoc['twitch_user']['id'],
+                        twitchLiveStreamInfo['title']
+                    );
+                    cloudantDoc['twitch_stream_vod'] = twitchVideoInfo;
+                }
             }
             cloudantDoc['discord_notification_started_at'] = twitchLiveStreamInfo['started_at'];
         } else {
@@ -320,13 +335,14 @@ const editDiscordNotification = async (cloudantDoc) => {
             embed.setImage(cloudantDoc['twitch_user']['offline_image_url'] + '?ts=' + moment().valueOf());
         }
     }
+    embed.setFooter('Last online');
+    embed.setTimestamp(moment());
+    let customMessage = cloudantDoc['twitch_user']['display_name'] + ' is not online anymore.';
     if (cloudantDoc['twitch_stream_vod']) {
         embed.setTitle(cloudantDoc['twitch_stream_vod']['title']);
         embed.addField('VOD', '[Link](' + cloudantDoc['twitch_stream_vod']['url'] + ')');
+        customMessage += ' Check out the VOD!';
     }
-    embed.setFooter('Last online');
-    embed.setTimestamp(moment());
-    let customMessage = cloudantDoc['twitch_user']['display_name'] + ' is not online anymore. Check out the VOD!';
     const discordMessage = await message.edit(customMessage, embed);
     return discordMessage;
 };
